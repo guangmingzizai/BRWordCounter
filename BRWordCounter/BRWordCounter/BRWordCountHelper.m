@@ -109,7 +109,7 @@ static inline NSString *CurrentTextInView(UITextView *view) {
 		NSInteger diff = (addedWordCount - replacedWordCount);
 		NSUInteger finalWordCount = (startingWordCount + diff);
 		BRLog(@"Got final word count %lu for text: %@", (unsigned long)finalWordCount, [oldText stringByReplacingCharactersInRange:range withString:text]);
-		if ( wordCount != finalWordCount ) {
+		if (wordCount != finalWordCount ) {
 			[self willChangeValueForKey:@"wordCount"];
 			wordCount = finalWordCount;
 			[self didChangeValueForKey:@"wordCount"];
@@ -120,6 +120,32 @@ static inline NSString *CurrentTextInView(UITextView *view) {
 	});
 	
 	return YES;
+}
+
+- (void)limitTextView:(UITextView *)textView toWordsCount:(NSUInteger)wordsCount {
+    NSString *string = textView.text;
+    dispatch_async(queue, ^{
+        __block NSRange range = NSMakeRange(NSNotFound, 0);
+        __block NSUInteger count = 0;
+        [string enumerateSubstringsInRange:NSMakeRange(0, string.length) options:(NSStringEnumerationByWords|NSStringEnumerationSubstringNotRequired) usingBlock:^(NSString * _Nullable word, NSRange substringRange, NSRange enclosingRange, BOOL *stop) {
+            count += 1;
+            if (count == wordsCount) {
+                range = enclosingRange;
+                *stop = YES;
+            }
+        }];
+        if (range.location != NSNotFound) {
+            dispatch_async(dispatch_get_main_queue(), ^{
+                textView.text = [string substringToIndex:NSMaxRange(range)];
+                [self willChangeValueForKey:@"wordCount"];
+                wordCount = wordsCount;
+                [self didChangeValueForKey:@"wordCount"];
+                dispatch_async(dispatch_get_main_queue(), ^{
+                    [self.delegate wordCounter:self wordCountDidChange:wordsCount];
+                });
+            });
+        }
+    });
 }
 
 + (void)countWordsInString:(NSString *)string finished:(void (^)(NSUInteger wordCount))callback {

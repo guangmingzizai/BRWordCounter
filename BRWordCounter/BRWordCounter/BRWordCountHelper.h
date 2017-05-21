@@ -56,6 +56,8 @@ NS_ASSUME_NONNULL_BEGIN
  */
 - (instancetype)initWithTextView:(UITextView *)textView delegate:(nullable id<BRWordCountDelegate>)delegate;
 
+- (void)limitTextView:(UITextView *)textView toWordsCount:(NSUInteger)wordsCount;
+
 /**
  Utility method to asynchronously count the words in a document.
  
